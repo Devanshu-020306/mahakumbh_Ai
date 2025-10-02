@@ -1,18 +1,18 @@
 from flask import Flask, request, jsonify, render_template, redirect, url_for, session, flash
 
-# --- AI Core Imports (ADD THE NEW ONE) ---
+# --- AI Core Imports ---
 from ai_core.itinerary_planner import generate_itinerary, find_alternative_event
 from ai_core.navigation import get_route_suggestion
 from ai_core.assistant import answer_question
 from ai_core.safety_monitor import analyze_post
-from ai_core.notification_engine import generate_notifications # <-- NEW IMPORT
+from ai_core.notification_engine import generate_notifications
 
 app = Flask(__name__)
 app.secret_key = 'hackathon-super-secret-key-12345'
 
 USERS = { "devotee": "password123", "test": "test" }
 
-# --- Login/Register/Logout Routes (NO CHANGE) ---
+# --- Login/Register/Logout Routes (No Change) ---
 @app.route('/')
 def home():
     if 'username' in session: return redirect(url_for('companion'))
@@ -52,7 +52,6 @@ def logout():
     flash('You have been logged out.', 'info')
     return redirect(url_for('login'))
 
-# --- Companion App Route (NO CHANGE) ---
 @app.route('/companion')
 def companion():
     if 'username' not in session:
@@ -60,7 +59,7 @@ def companion():
         return redirect(url_for('login'))
     return render_template('companion.html')
 
-# --- API Endpoint (UPDATED) ---
+# --- API Endpoint (THIS IS WHERE THE FIX IS) ---
 @app.route('/api/get_recommendations', methods=['POST'])
 def get_recommendations():
     if 'username' not in session:
@@ -73,15 +72,15 @@ def get_recommendations():
             'interests': data.get('interests', []),
             'budget': data.get('budget')
         }
-        # (All existing logic remains the same...)
+        
         itinerary = generate_itinerary(profile)
         community_post = data.get('community_post', '')
         safety_analysis = analyze_post(community_post) if community_post else {
             "status": "Normal", "message": "No community post submitted."
         }
+        
         itinerary_update = None
         if safety_analysis.get('status') == 'ALERT' and safety_analysis.get('location'):
-            # ... (safety override logic is the same)
             unsafe_location = safety_analysis['location']
             original_events = list(itinerary['suggested_events']) 
             itinerary['suggested_events'] = [e for e in itinerary['suggested_events'] if e['location'] != unsafe_location]
@@ -91,12 +90,24 @@ def get_recommendations():
                     itinerary['suggested_events'].append(alternative)
                     itinerary_update = {"unsafe_location": unsafe_location, "new_suggestion": alternative}
         
-        first_event_location = itinerary['suggested_events'][0]['location'] if itinerary['suggested_events'] else "Mela Grounds"
+        # ===================================================
+        # START OF THE FIX
+        # ===================================================
+        
+        # --- FIX: Defensively get the first event location ---
+        # This new block of code safely handles the case where the event list might be empty.
+        if itinerary['suggested_events']:
+            first_event_location = itinerary['suggested_events'][0]['location']
+        else:
+            first_event_location = "Mela Grounds" # Use a safe fallback if no events are left
+        
+        # ===================================================
+        # END OF THE FIX
+        # ===================================================
+
         navigation_suggestion = get_route_suggestion(first_event_location)
         user_question = data.get('question', '')
         assistant_response = answer_question(user_question) if user_question else "Ask me a question to get help."
-        
-        # --- NEW: Generate Notifications ---
         notifications = generate_notifications(profile, itinerary)
         
         response = {
@@ -105,10 +116,12 @@ def get_recommendations():
             "assistant": { "user_question": user_question, "answer": assistant_response },
             "safety_analysis": safety_analysis,
             "itinerary_update": itinerary_update,
-            "notifications": notifications # <-- ADD NOTIFICATIONS TO RESPONSE
+            "notifications": notifications
         }
         return jsonify(response)
     except Exception as e:
+        import traceback
+        traceback.print_exc() # This will print the detailed error to your terminal for debugging
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
