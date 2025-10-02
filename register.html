@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - MahaKumbh AI Companion</title>
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Russo+One&display=swap" rel="stylesheet">
+    <style>
+        /* (The CSS is identical to login.html) */
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 0; padding: 20px; }
+        #image-background { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; background-color: #000; }
+        #image-background::after { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to right, rgba(255, 100, 0, 0.2), rgba(0,0,0,0.5), rgba(0, 255, 150, 0.2)); z-index: 1; }
+        .bg-image { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-size: cover; background-position: center; z-index: 0; background-image: url('https://images.unsplash.com/photo-1616594418293-1b9b1b4a0f3b?auto=format&fit=crop&w=2070'); }
+        #background-title { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); z-index: 2; color: #FFF; font-family: 'Russo One', sans-serif; font-size: clamp(2.5rem, 10vw, 5rem); font-weight: 400; text-shadow: 0 0 5px #fff, 0 0 10px #fff, 0 0 15px #FF9933, 0 0 20px #FF9933; animation: fadeInTitle 2s ease-in-out; white-space: nowrap; }
+        @keyframes fadeInTitle { from{opacity:0;transform:translate(-50%,20px)} to{opacity:1;transform:translate(-50%,0)} }
+        .login-container { max-width: 400px; margin: 10vh auto; background: rgba(255, 255, 255, 0.98); padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); z-index: 2; position: relative; }
+        h1 { text-align: center; color: #8B4513; }
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input[type="text"], input[type="password"] { width: 100%; padding: 12px; border-radius: 4px; border: 1px solid #ccc; box-sizing: border-box; }
+        button { background-color: #f08b1d; color: white; padding: 12px 20px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; width: 100%; }
+        .switch-link { text-align: center; margin-top: 20px; }
+        .flash-message { padding: 15px; margin-bottom: 20px; border-radius: 4px; text-align: center; }
+        .flash-success { background-color: #d4edda; color: #155724; }
+        .flash-error { background-color: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+    <div id="image-background">
+        <div class="bg-image"></div>
+        <div id="background-title">महाकुंभ 2025</div>
+    </div>
+    <div class="login-container">
+        <h1>Register</h1>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}{% for category, message in messages %}
+              <div class="flash-message flash-{{ category }}">{{ message }}</div>
+          {% endfor %}{% endif %}
+        {% endwith %}
+        <form method="POST">
+            <div class="form-group"><label for="username">Username</label><input type="text" id="username" name="username" required></div>
+            <div class="form-group"><label for="password">Password</label><input type="password" id="password" name="password" required></div>
+            <button type="submit">Register</button>
+        </form>
+        <div class="switch-link"><p>Already have an account? <a href="{{ url_for('login') }}">Login here</a></p></div>
+    </div>
+</body>
+</html>

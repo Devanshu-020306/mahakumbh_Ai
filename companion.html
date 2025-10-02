@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Companion - MahaKumbh</title>
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Russo+One&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 0; padding: 20px; }
+        #image-background { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; background-color: #000; }
+        #image-background::after { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to right, rgba(255, 100, 0, 0.2), rgba(0,0,0,0.5), rgba(0, 255, 150, 0.2)); z-index: 1; }
+        .bg-image { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-size: cover; background-position: center; z-index: 0; background-image: url('https://images.unsplash.com/photo-1616594418293-1b9b1b4a0f3b?auto=format&fit=crop&w=2070'); }
+        
+        #background-title { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); z-index: 2; color: #FFF; font-family: 'Russo One', sans-serif; font-size: clamp(2.5rem, 10vw, 5rem); font-weight: 400; text-shadow: 0 0 5px #fff, 0 0 10px #fff, 0 0 15px #FF9933, 0 0 20px #FF9933; animation: fadeInTitle 2s ease-in-out; white-space: nowrap; }
+        @keyframes fadeInTitle { from{opacity:0;transform:translate(-50%,20px)} to{opacity:1;transform:translate(-50%,0)} }
+        
+        .container { max-width: 800px; margin: auto; background: rgba(255, 255, 255, 0.95); padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); position: relative; z-index: 2; }
+        h1, h2 { color: #8B4513; }
+        h1 { text-align: center; border-bottom: 2px solid #FF9933; padding-bottom: 10px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        select, input[type="text"], textarea { width: 100%; padding: 10px; border-radius: 4px; border: 1px solid #ccc; box-sizing: border-box; }
+        button { background-color: #f08b1d; color: white; padding: 12px 20px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; width: 100%; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; color: #333; }
+        .header a { background-color: #d9534f; color: white; padding: 8px 15px; text-decoration: none; border-radius: 4px; }
+        #results { margin-top: 30px; border-top: 2px solid #eee; padding-top: 20px; }
+        .result-card { border-left: 5px solid #ddd; padding: 15px; margin-bottom: 15px; border-radius: 0 5px 5px 0; background: #f9f9f9; }
+        .result-card h3 { margin-top: 0; color: #8B4513; }
+        .crowd-High { color: red; font-weight: bold; }
+        .crowd-Medium { color: orange; font-weight: bold; }
+        .crowd-Low { color: green; font-weight: bold; }
+        .spinner { display: none; margin: 20px auto; width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #f08b1d; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        .alert-card-ALERT { border-left-color: #d9534f; background-color: #f2dede; }
+        .alert-card-ALERT h3 { color: #a94442; }
+        .alert-card-Normal { border-left-color: #5cb85c; }
+        .itinerary-update-card { background-color: #fcf8e3; border-left-color: #f0ad4e; }
+        .itinerary-update-card h3 { color: #8a6d3b; }
+        
+        #notification-container { position: fixed; top: 20px; right: 20px; z-index: 1000; width: 320px; }
+        .toast { background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: flex; align-items: flex-start; margin-bottom: 10px; transform: translateX(120%); animation: slideIn 0.5s forwards; }
+        @keyframes slideIn { to { transform: translateX(0); } }
+        .toast .emoji { font-size: 1.5rem; margin-right: 15px; }
+        .toast .content { flex-grow: 1; }
+        .toast .title { font-weight: bold; color: #333; }
+        .toast .message { font-size: 0.9rem; color: #666; }
+    </style>
+</head>
+<body>
+    <div id="image-background">
+        <div class="bg-image"></div>
+        <div id="background-title">महाकुंभ 2025</div>
+    </div>
+    
+    <div id="notification-container"></div>
+
+    <div class="container">
+        <div class="header">
+            <p style="margin: 0;">Welcome, <strong>{{ session.username }}</strong>!</p>
+            <a href="{{ url_for('logout') }}">Logout</a>
+        </div>
+        <h1>🔮 MahaKumbh AI Companion</h1>
+        <p style="text-align: center;">Your personalized guide to a safe and divine experience.</p>
+        <form id="profileForm">
+            <div class="form-group"><label for="age_group">Who are you?</label><select id="age_group" name="age_group"><option value="Youth">Youth (18-35)</option><option value="Family">Family with Children</option><option value="Elderly">Elderly Devotee (60+)</option></select></div>
+            <div class="form-group"><label for="interests">What are your interests?</label><select id="interests" name="interests"><option value="spiritual">Spiritual Activities</option><option value="cultural">Cultural Events</option><option value="historical">History & Heritage</option></select></div>
+            <div class="form-group"><label for="budget">What is your budget for stay?</label><select id="budget" name="budget"><option value="Budget">Budget (Ashram/Dorm)</option><option value="Mid-range">Mid-range (Hotel)</option><option value="Luxury">Luxury</option></select></div>
+            <div class="form-group"><label for="question">Ask the Assistant:</label><input type="text" id="question" name="question" placeholder="e.g., 'When is the next Shahi Snan?'"></div>
+            <div class="form-group"><label for="community_post">Post a Community Update / Report an Issue:</label><textarea id="community_post" rows="3" placeholder="e.g., 'There is a fire at Har Ki Pauri!'"></textarea></div>
+            <button type="submit">✨ Get My AI Plan</button>
+        </form>
+        <div id="spinner" class="spinner"></div>
+        <div id="results"></div>
+    </div>
+
+    <!-- =================================================== -->
+    <!-- START: COMPLETE AND CORRECT JAVASCRIPT SECTION -->
+    <!-- =================================================== -->
+    <script>
+        document.getElementById('profileForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const resultsDiv = document.getElementById('results');
+            const spinner = document.getElementById('spinner');
+            
+            resultsDiv.innerHTML = '';
+            spinner.style.display = 'block';
+
+            const formData = {
+                age_group: document.getElementById('age_group').value,
+                interests: [document.getElementById('interests').value],
+                budget: document.getElementById('budget').value,
+                question: document.getElementById('question').value,
+                community_post: document.getElementById('community_post').value
+            };
+
+            try {
+                const response = await fetch('/api/get_recommendations', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                });
+
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+
+                const data = await response.json();
+                displayResults(data);
+
+            } catch (error) {
+                resultsDiv.innerHTML = `<p style="color: red;">Error: Could not fetch recommendations. Is the server running?</p>`;
+                console.error('Fetch error:', error);
+            } finally {
+                spinner.style.display = 'none';
+            }
+        });
+
+        function displayResults(data) {
+            // Clear previous notifications and results
+            document.getElementById('notification-container').innerHTML = '';
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '';
+
+            // Display new notifications if they exist
+            if (data.notifications && data.notifications.length > 0) {
+                displayNotifications(data.notifications);
+            }
+            
+            // Build the HTML for the main results cards
+            let html = '';
+            const safety = data.safety_analysis;
+            html += `<h2>Community Safety Monitor</h2>`;
+            html += `<div class="result-card alert-card-${safety.status}"><h3>${safety.type}</h3><p><strong>Status:</strong> ${safety.message}</p>`;
+            if (safety.flagged_keywords && safety.flagged_keywords.length > 0) { html += `<p><strong>Flagged Keywords:</strong> ${safety.flagged_keywords.join(', ')}</p>`; }
+            if (safety.location) { html += `<p><strong>Detected Location:</strong> ${safety.location}</p>`; }
+            html += `</div>`;
+            
+            const update = data.itinerary_update;
+            if (update) {
+                html += `<div class="result-card itinerary-update-card"><h3>AI Itinerary Override!</h3>`;
+                html += `<p>Due to the safety alert at <strong>${update.unsafe_location}</strong>, your schedule has been automatically updated.</p>`;
+                html += `<p><strong>New Suggestion:</strong> We now recommend you visit <strong>${update.new_suggestion.name}</strong>.</p></div>`;
+            }
+
+            const itinerary = data.itinerary;
+            html += `<h2>Your Personalized Plan</h2>`;
+            html += `<div class="result-card"><h3>Recommended Stay</h3>`;
+            html += itinerary.suggested_stay ? `<p><strong>${itinerary.suggested_stay.name}</strong> (${itinerary.suggested_stay.type})</p>` : `<p>No specific stay found for your profile.</p>`;
+            html += `</div>`;
+            html += `<div class="result-card"><h3>Recommended Events</h3><ul>`;
+            itinerary.suggested_events.forEach(event => { html += `<li><strong>${event.name}</strong> (${event.type}) at ${event.location} <br><small>${event.description}</small></li>`; });
+            html += `</ul></div>`;
+
+            const nav = data.navigation;
+            html += `<h2>Smart Navigation & Safety Alert</h2>`;
+            html += `<div class="result-card"><h3>Route to: ${nav.destination}</h3><p>Crowd Level: <span class="crowd-${nav.crowd_info.crowd_level}">${nav.crowd_info.crowd_level}</span></p><p><strong>Safety Message:</strong> ${nav.crowd_info.message}</p><p><strong>Route Suggestion:</strong> ${nav.crowd_info.alternative_route}</p></div>`;
+            
+            const assistant = data.assistant;
+            html += `<h2>AI Assistant</h2>`;
+            html += `<div class="result-card">`;
+            html += assistant.user_question ? `<p><strong>You asked:</strong> "${assistant.user_question}"</p><p><strong>Assistant's Answer:</strong> ${assistant.answer}</p>` : `<p>Ask me a question to get help.</p>`;
+            html += `</div>`;
+
+            resultsDiv.innerHTML = html;
+        }
+        
+        function displayNotifications(notifications) {
+            const container = document.getElementById('notification-container');
+            notifications.forEach((notif, index) => {
+                setTimeout(() => {
+                    const toast = document.createElement('div');
+                    toast.className = 'toast';
+                    toast.innerHTML = `
+                        <div class="emoji">${notif.emoji}</div>
+                        <div class="content">
+                            <div class="title">${notif.title}</div>
+                            <div class="message">${notif.message}</div>
+                        </div>
+                    `;
+                    container.appendChild(toast);
+                }, index * 400);
+            });
+        }
+    </script>
+    <!-- =================================================== -->
+    <!-- END: COMPLETE AND CORRECT JAVASCRIPT SECTION -->
+    <!-- =================================================== -->
+</body>
+</html>
